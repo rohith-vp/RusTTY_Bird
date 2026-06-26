@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "RusttyBird"
+name = "RusTTY_Bird"
 version = "0.1.0"
 dependencies = [
  "crossterm",

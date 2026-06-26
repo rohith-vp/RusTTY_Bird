@@ -15,6 +15,22 @@ A lightweight, high-performance terminal-based Flappy Bird clone written in **Ru
 
 ---
 
+## 🛠️ Requirements
+
+### To Run the Pre-compiled Binary
+* **Operating System**: Windows, macOS, or Linux.
+* **Terminal Emulator**: A modern terminal emulator with true color (24-bit RGB) support and support for ANSI escape codes (e.g., Alacritty, Kitty, iTerm2, Windows Terminal, or GNOME Terminal). 
+* **Permissions**: Executable permissions granted to the binary file (`chmod +x`).
+
+### To Build and Run From Source
+* **Rust Toolchain**: Stable Rust installation (Compiler `rustc` and package manager `cargo`). It is recommended to use **Rust 1.70.0** or newer due to dependencies.
+* **Dependencies (Handled automatically by Cargo)**:
+  * `crossterm` (v0.27 or newer) — For terminal raw mode, drawing primitives, and cross-platform input event handling.
+  * `rand` (v0.9 or newer) — For generating the dynamic pipe gap positions.
+* **C Linker**: A valid local C linker installed on your system framework (e.g., `cc`, `gcc`, `clang`, or MSVC Build Tools) to finalize compilation.
+
+---
+
 ## 🚀 How to Run the Game
 
 ### Method 1: Download the Pre-compiled Binary (Quickest)
