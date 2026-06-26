@@ -42,11 +42,15 @@ You do not need Rust installed on your system to play the game.
 3. Open your terminal or command prompt, navigate to your downloads folder, and execute the file:
 ```bash
 # Linux/macOS
-chmod +x rustty_bird
-./rustty_bird
+chmod +x RusTTY_Bird_Linux
+./RusTTY_Bird_Linux
+
+# macOS
+chmod +x RusTTY_Bird_macOS
+./RusTTY_Bird_macOS
 
 # Windows
-.\rustty_bird.exe
+.\RusTTY_Bird_Windows.exe
 ```
 
 ### Method 2: Build and Run from Source
