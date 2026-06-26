@@ -2,6 +2,8 @@
 
 A lightweight, high-performance terminal-based Flappy Bird clone written in **Rust**.
 
+![screenshot of RusTTY_Bird](RusTTY_Bird.png)
+
 ---
 
 ## 🏗️ Architecture & Libraries
