@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use crate::{
     pipe::Pipe,
     screen_buffer::ScreenBuffer
@@ -7,18 +8,28 @@ use crate::{
 pub struct PipesManager {
     screen_cols: i16,
     screen_rows: i16,
-    pub pipes_vec: Vec<Pipe>
+    pub pipes_vec: VecDeque<Pipe>
 }
 
 impl PipesManager {
     pub fn new(screen_cols: i16, screen_rows: i16) -> Self {
-        let mut pipes_vec: Vec<Pipe> = Vec::new();
-        pipes_vec.push(Pipe::new(screen_cols - Pipe::PIPE_WIDTH, screen_cols, screen_rows));
+        let mut pipes_vec = VecDeque::with_capacity(4);
+        let initial_pipe = Pipe::new(screen_cols, screen_cols, screen_rows);
+        let spawn_x = screen_cols - initial_pipe.width;
+        pipes_vec.push_back(Pipe::new(spawn_x, screen_cols, screen_rows));
         Self { screen_cols, screen_rows, pipes_vec }
     }
 
     fn spawn_new_pipe(&mut self) {
-        self.pipes_vec.push(Pipe::new(self.screen_cols + Pipe::PIPE_WIDTH + 1, self.screen_cols, self.screen_rows));
+        if let Some(last_pipe) = self.pipes_vec.back() {
+            // Spawn perfectly behind the last pipe using its dynamic layout definitions
+            let next_x = last_pipe.x_int + last_pipe.width + last_pipe.pipe_gap;
+            self.pipes_vec.push_back(Pipe::new(
+                next_x,
+                self.screen_cols,
+                self.screen_rows
+            ));
+        }
     }
 
     pub fn update(&mut self) {
@@ -26,12 +37,16 @@ impl PipesManager {
             pipe.update();
         }
 
-        if self.pipes_vec[0].is_off_screen() {
-            self.pipes_vec.remove(0);
+        if let Some(front_pipe) = self.pipes_vec.front() {
+            if front_pipe.is_off_screen() {
+                self.pipes_vec.pop_front();
+            }
         }
 
-        if self.pipes_vec[self.pipes_vec.len() - 1].should_spawn_next() {
-            self.spawn_new_pipe();
+        if let Some(last_pipe) = self.pipes_vec.back() {
+            if last_pipe.should_spawn_next() {
+                self.spawn_new_pipe();
+            }
         }
     }
 

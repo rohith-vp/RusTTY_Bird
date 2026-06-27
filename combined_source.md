@@ -1,5 +1,5 @@
 # Project Source Code (Combined)
-Generated on: Friday 26 June 2026 06:43:55 PM IST
+Generated on: Friday 26 June 2026 09:47:21 PM IST
 
 ## File: `src/bird.rs`
 
@@ -273,10 +273,7 @@ fn main() -> std::io::Result<()> {
 use crossterm::style::Color;
 use rand::Rng;
 
-use crate::{
-    screen_buffer::ScreenBuffer,
-    utils::darken_color
-};
+use crate::{screen_buffer::ScreenBuffer, utils::darken_color};
 
 pub struct Pipe {
     x: f32,
@@ -284,7 +281,8 @@ pub struct Pipe {
     gap_middle: i16,
     screen_cols: i16,
     screen_rows: i16,
-    pub scored: bool
+    pub scored: bool,
+    cached_colors: [Color; Self::PIPE_WIDTH as usize],
 }
 
 impl Pipe {
@@ -292,14 +290,35 @@ impl Pipe {
     pub const GAP_HEIGHT: i16 = 10;
     pub const PIPE_GAP: i16 = 15;
 
-    pub const PIPE_COLOR_LEFTMOST: Color = Color::Rgb { r: 158, g: 227, b: 85 };
+    pub const PIPE_COLOR_LEFTMOST: Color = Color::Rgb {
+        r: 158,
+        g: 227,
+        b: 85,
+    };
     pub const PIPE_COLOR_DARKEN_FACTOR: f32 = 0.82;
 
     pub fn new(x_int: i16, screen_cols: i16, screen_rows: i16) -> Self {
         let mut rng = rand::rng();
         let gap_middle = rng.random_range(Self::GAP_HEIGHT..(screen_rows - Self::GAP_HEIGHT));
         let x = x_int as f32;
-        Self { x, x_int, gap_middle, screen_cols, screen_rows, scored: false }
+
+        // Precompute the horizontal gradient profile *once* during instantiation
+        let mut cached_colors = [Self::PIPE_COLOR_LEFTMOST; Self::PIPE_WIDTH as usize];
+        let mut current_color = Self::PIPE_COLOR_LEFTMOST;
+        for x_offset in 0..Self::PIPE_WIDTH as usize {
+            cached_colors[x_offset] = current_color;
+            current_color = darken_color(current_color, Self::PIPE_COLOR_DARKEN_FACTOR);
+        }
+
+        Self {
+            x,
+            x_int,
+            gap_middle,
+            screen_cols,
+            screen_rows,
+            scored: false,
+            cached_colors,
+        }
     }
 
     #[inline]
@@ -313,12 +332,10 @@ impl Pipe {
     }
 
     pub fn check_collission(&self, obs_x: i16, obs_y: i16) -> bool {
-        obs_x >= self.x_int &&
-        obs_x <= self.x_int + Self::PIPE_WIDTH &&
-        (
-            obs_y <= self.gap_middle - Self::GAP_HEIGHT / 2 ||
-            obs_y >= self.gap_middle + Self::GAP_HEIGHT / 2
-        )
+        obs_x >= self.x_int
+            && obs_x <= self.x_int + Self::PIPE_WIDTH
+            && (obs_y <= self.gap_middle - Self::GAP_HEIGHT / 2
+                || obs_y >= self.gap_middle + Self::GAP_HEIGHT / 2)
     }
 
     pub fn update(&mut self) {
@@ -327,29 +344,36 @@ impl Pipe {
     }
 
     pub fn draw(&self, buffer: &mut ScreenBuffer) {
-        let mut row_colors = [Self::PIPE_COLOR_LEFTMOST; Self::PIPE_WIDTH as usize];
-        let mid_point = (Self::PIPE_WIDTH / 2) as usize;
-
-        let mut current_color = Self::PIPE_COLOR_LEFTMOST;
-
-        for x_offset in 0..Self::PIPE_WIDTH as usize {
-            row_colors[x_offset] = current_color;
-            if x_offset + 1 == mid_point || x_offset + 1 > mid_point {
-                current_color = darken_color(current_color, Self::PIPE_COLOR_DARKEN_FACTOR);
-            } else {
-                current_color = darken_color(current_color, Self::PIPE_COLOR_DARKEN_FACTOR);
-            }
+        // Edge Case / Safety Check: If the pipe is entirely off-screen to the left,
+        // skip rendering entirely. (Handled at PipesManager level, but ideal for safety).
+        if self.x_int + Self::PIPE_WIDTH < 0 {
+            return;
         }
 
         let gap_top = self.gap_middle - Self::GAP_HEIGHT / 2;
         let gap_bottom = self.gap_middle + Self::GAP_HEIGHT / 2;
 
+        // Performance Optimization: Cache buffer width to minimize field lookups
+        // Calculate bounded horizontal indices to prevent drawing off-screen cells
+        let start_offset = if self.x_int < 0 { -self.x_int } else { 0 };
+        let end_offset = Self::PIPE_WIDTH;
+
         for y in 0..self.screen_rows {
+            // Bypass processing inside the gap region completely
             if y >= gap_top && y < gap_bottom {
                 continue;
             }
-            for (x_offset, &color) in row_colors.iter().enumerate() {
-                buffer.set(self.x_int + x_offset as i16, y, '█', color, color);
+
+            for x_offset in start_offset..end_offset {
+                let world_x = self.x_int + x_offset;
+
+                // Early break if the pipe columns cross past the right screen border
+                if world_x >= self.screen_cols {
+                    break;
+                }
+
+                let color = self.cached_colors[x_offset as usize];
+                buffer.set(world_x, y, '█', color, color);
             }
         }
     }
@@ -360,6 +384,7 @@ impl Pipe {
 ## File: `src/pipes_manager.rs`
 
 ```rust
+use std::collections::VecDeque;
 use crate::{
     pipe::Pipe,
     screen_buffer::ScreenBuffer
@@ -369,18 +394,22 @@ use crate::{
 pub struct PipesManager {
     screen_cols: i16,
     screen_rows: i16,
-    pub pipes_vec: Vec<Pipe>
+    pub pipes_vec: VecDeque<Pipe>
 }
 
 impl PipesManager {
     pub fn new(screen_cols: i16, screen_rows: i16) -> Self {
-        let mut pipes_vec: Vec<Pipe> = Vec::new();
-        pipes_vec.push(Pipe::new(screen_cols - Pipe::PIPE_WIDTH, screen_cols, screen_rows));
+        let mut pipes_vec = VecDeque::with_capacity(4);
+        pipes_vec.push_back(Pipe::new(screen_cols - Pipe::PIPE_WIDTH, screen_cols, screen_rows));
         Self { screen_cols, screen_rows, pipes_vec }
     }
 
     fn spawn_new_pipe(&mut self) {
-        self.pipes_vec.push(Pipe::new(self.screen_cols + Pipe::PIPE_WIDTH + 1, self.screen_cols, self.screen_rows));
+        self.pipes_vec.push_back(Pipe::new(
+            self.screen_cols + Pipe::PIPE_WIDTH + 1,
+            self.screen_cols,
+            self.screen_rows
+        ));
     }
 
     pub fn update(&mut self) {
@@ -388,12 +417,16 @@ impl PipesManager {
             pipe.update();
         }
 
-        if self.pipes_vec[0].is_off_screen() {
-            self.pipes_vec.remove(0);
+        if let Some(front_pipe) = self.pipes_vec.front() {
+            if front_pipe.is_off_screen() {
+                self.pipes_vec.pop_front();
+            }
         }
 
-        if self.pipes_vec[self.pipes_vec.len() - 1].should_spawn_next() {
-            self.spawn_new_pipe();
+        if let Some(last_pipe) = self.pipes_vec.back() {
+            if last_pipe.should_spawn_next() {
+                self.spawn_new_pipe();
+            }
         }
     }
 

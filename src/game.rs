@@ -3,7 +3,6 @@ use crossterm::event::{ self, Event, KeyCode, KeyEvent, KeyModifiers };
 
 use crate::{
     bird::Bird,
-    pipe::Pipe,
     pipes_manager::PipesManager,
     scoring_system::ScoringSystem,
     screen_buffer::ScreenBuffer
@@ -20,17 +19,17 @@ pub struct Game {
 impl Game {
     pub fn new(screen_cols: i16, screen_rows: i16) -> Self {
         let buffer = ScreenBuffer::new(screen_cols as u16, screen_rows as u16);
-        let bird = Bird::new(screen_rows);
+        let bird = Bird::new(screen_cols, screen_rows);
         let pipes_manager = PipesManager::new(screen_cols, screen_rows);
         let scoring_system = ScoringSystem::new();
         Self { buffer, bird, pipes_manager, scoring_system }
     }
 
     pub fn has_bird_collided(&self) -> bool {
+        let bird_x = self.bird.get_x(); // Use dynamic getter
         for pipe in self.pipes_manager.pipes_vec.iter() {
-            // Loop through all 3 horizontal cells that make up the bird's sprite width
             for offset in 0..crate::bird::Bird::SPRITE_CELL_WIDTH {
-                let current_bird_x = crate::bird::Bird::BIRD_X + offset;
+                let current_bird_x = bird_x + offset;
                 let current_bird_y = self.bird.bird_y as i16;
 
                 if pipe.check_collission(current_bird_x, current_bird_y) {
@@ -42,8 +41,9 @@ impl Game {
     }
 
     pub fn did_bird_passthrough(&mut self) -> bool {
+        let bird_x = self.bird.get_x(); // Use dynamic getter
         for pipe in self.pipes_manager.pipes_vec.iter_mut() {
-            if !pipe.scored && (pipe.x_int + Pipe::PIPE_WIDTH) < Bird::BIRD_X {
+            if !pipe.scored && (pipe.x_int + pipe.width) < bird_x {
                 pipe.scored = true;
                 return true;
             }
