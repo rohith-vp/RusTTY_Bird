@@ -60,7 +60,7 @@ If you have the Rust toolchain installed, you can easily compile and run the pro
 1. Clone the repository:
 
 ```bash
-git clone [https://github.com/yourusername/RusTTY_Bird.git](https://github.com/yourusername/RusTTY_Bird.git)
+git clone [https://github.com/rohith-vp/RusTTY_Bird.git](https://github.com/rohith-vp/RusTTY_Bird.git)
 cd RusTTY_Bird
 ```
 
