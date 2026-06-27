@@ -57,9 +57,11 @@ impl Bird {
         self.screen_cols * Self::BIRD_X_REL_POS / 100
     }
 
-    pub fn update(&mut self) {
-        self.bird_y += self.bird_y_vel;
-        self.bird_y_vel += self.gravity;
+    pub fn update(&mut self, dt: f32) {
+        let frame_scale = dt * 60.0;
+
+        self.bird_y += self.bird_y_vel * frame_scale;
+        self.bird_y_vel += self.gravity * frame_scale;
 
         if self.bird_y_vel > self.terminal_velocity {
             self.bird_y_vel = self.terminal_velocity;

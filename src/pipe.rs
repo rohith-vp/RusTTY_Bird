@@ -20,7 +20,7 @@ pub struct Pipe {
 
 impl Pipe {
     pub const PIPE_WIDTH_PERCENT: i16 = 4;      // 4% of screen width
-    pub const GAP_HEIGHT_PERCENT: i16 = 25;     // 25% of screen height
+    pub const GAP_HEIGHT_PERCENT: i16 = 30;     // 25% of screen height
     pub const PIPE_GAP_PERCENT: i16 = 25;       // 20% of screen width
 
     pub const PIPE_COLOR_LEFTMOST: Color = Color::Rgb {
@@ -87,10 +87,10 @@ impl Pipe {
                 || obs_y >= self.gap_middle + self.gap_height / 2)
     }
 
-    pub fn update(&mut self) {
-        // Tie speed to resolution size so pipes move relative to screen width
+    pub fn update(&mut self, dt: f32) {
+        let frame_scale = dt * 60.0;
         let speed = (self.screen_cols as f32 * 0.005).max(0.3);
-        self.x -= speed;
+        self.x -= speed * frame_scale;
         self.x_int = self.x.round() as i16;
     }
 

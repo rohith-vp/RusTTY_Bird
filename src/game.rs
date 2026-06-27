@@ -51,7 +51,7 @@ impl Game {
         false
     }
 
-    pub fn run(&mut self) -> std::io::Result<bool> {
+    pub fn run(&mut self, dt: f32) -> std::io::Result<bool> {
         // Handle keyboard input
         while event::poll(Duration::from_millis(0))? {
             if let Event::Key(KeyEvent { code, modifiers, .. }) = event::read()? {
@@ -76,8 +76,8 @@ impl Game {
             return Ok(false);
         }
 
-        self.bird.update();
-        self.pipes_manager.update();
+        self.bird.update(dt);
+        self.pipes_manager.update(dt);
 
         if self.did_bird_passthrough() {
             self.scoring_system.increment_score();

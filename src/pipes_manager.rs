@@ -32,9 +32,9 @@ impl PipesManager {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, dt: f32) {
         for pipe in self.pipes_vec.iter_mut() {
-            pipe.update();
+            pipe.update(dt);
         }
 
         if let Some(front_pipe) = self.pipes_vec.front() {
